@@ -8,6 +8,8 @@ O projeto foi desenvolvido com React Native, Expo e TypeScript, com navegação 
 
 A proposta é educacional e busca tornar conceitos de busca informada mais fáceis de observar por meio de cores, animações, custos e estados dos nós.
 
+A interface usa uma identidade visual inspirada em Tom e Jerry com imagens locais de `assets/images/`, sem depender de recursos externos.
+
 ## Objetivo
 
 O objetivo é demonstrar visualmente como algoritmos de busca percorrem um labirinto:

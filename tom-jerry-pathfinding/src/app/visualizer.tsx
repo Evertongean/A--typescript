@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   SafeAreaView,
@@ -25,6 +26,7 @@ import { AlgorithmSelector } from '@/components/AlgorithmSelector';
 import { HeuristicSelector } from '@/components/HeuristicSelector';
 import { MovementSelector } from '@/components/MovementSelector';
 import { ComparisonPanel } from '@/components/ComparisonPanel';
+import { NoPathModal } from '@/components/NoPathModal';
 
 import { aStar } from '@/algorithms/aStar';
 import { greedyBestFirst } from '@/algorithms/greedyBestFirst';
@@ -48,6 +50,15 @@ import { AlgorithmType } from '@/models/AlgorithmType';
 import { HeuristicType } from '@/models/HeuristicType';
 import { MovementType } from '@/models/MovementType';
 
+const TOM_IMAGE =
+  require('../../assets/images/tom.png');
+
+const JERRY_IMAGE =
+  require('../../assets/images/jerry.png');
+
+const TOM_AND_JERRY_IMAGE =
+  require('../../assets/images/tomjerry.png');
+
 export default function VisualizerScreen() {
   const router = useRouter();
 
@@ -55,7 +66,13 @@ export default function VisualizerScreen() {
     scenario?: string;
   }>();
 
+  const scenarioKey =
+    scenario ?? '';
+
   const { width } = useWindowDimensions();
+
+  const isCompactHeader =
+    width < 520;
 
   /* ==========================================
      EDITOR
@@ -133,6 +150,15 @@ export default function VisualizerScreen() {
     setSearchResult,
   ] = useState<SearchResult | null>(null);
 
+  const [
+    noPathModalScenario,
+    setNoPathModalScenario,
+  ] = useState<string | null>(null);
+
+  const showNoPathModal =
+    noPathModalScenario ===
+    scenarioKey;
+
   /* ==========================================
      COMPARAÇÃO
   ========================================== */
@@ -169,8 +195,12 @@ export default function VisualizerScreen() {
 
         if (result.found) {
           setSearchStatus('Concluído');
+          setNoPathModalScenario(null);
         } else {
           setSearchStatus('Sem caminho');
+          setNoPathModalScenario(
+            scenarioKey
+          );
         }
       },
     });
@@ -204,8 +234,11 @@ export default function VisualizerScreen() {
   ========================================== */
 
   const cellSize = Math.min(
-    Math.floor(
-      (width - 40) / COLS
+    Math.max(
+      Math.floor(
+        (width - 68) / COLS
+      ),
+      1
     ),
     40
   );
@@ -257,6 +290,8 @@ export default function VisualizerScreen() {
 
       return;
     }
+
+    setNoPathModalScenario(null);
 
     /*
      * Limpa resultado anterior.
@@ -493,6 +528,7 @@ export default function VisualizerScreen() {
 
   function handleStartSearch() {
     setSelectedPosition(null);
+    setNoPathModalScenario(null);
 
     if (!hasRequiredEndpoints()) {
       return;
@@ -568,6 +604,7 @@ export default function VisualizerScreen() {
 
   function handleResetSearch() {
     setSelectedPosition(null);
+    setNoPathModalScenario(null);
 
     animation.reset();
 
@@ -594,6 +631,8 @@ export default function VisualizerScreen() {
         scenario
       );
 
+    setNoPathModalScenario(null);
+
     animation.reset();
 
     setMazeGrid(
@@ -614,6 +653,18 @@ export default function VisualizerScreen() {
     <SafeAreaView
       style={styles.safeArea}
     >
+      <NoPathModal
+        visible={showNoPathModal}
+        onRestore={
+          handleRestoreScenario
+        }
+        onContinueEditing={() =>
+          setNoPathModalScenario(
+            null
+          )
+        }
+      />
+
       <StatusBar
         barStyle="dark-content"
         backgroundColor={
@@ -636,6 +687,8 @@ export default function VisualizerScreen() {
 
         <View style={styles.topBar}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Voltar para a seleção de cenários"
             style={styles.backButton}
             onPress={() =>
               router.back()
@@ -684,29 +737,63 @@ export default function VisualizerScreen() {
             VISUALIZADOR
         ==================================== */}
 
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            isCompactHeader &&
+              styles.headerCompact,
+          ]}
+        >
           <View
             style={
-              styles.colunnview
+              styles.visualizerIdentity
             }
           >
-            <Text
-              style={styles.label}
-            >
-              VISUALIZADOR
-            </Text>
+            {width >= 360 && (
+              <View
+                style={
+                  styles.headerArtwork
+                }
+              >
+                <Image
+                  source={
+                    TOM_AND_JERRY_IMAGE
+                  }
+                  style={
+                    styles.headerImage
+                  }
+                  resizeMode="contain"
+                  accessibilityLabel="Tom perseguindo Jerry"
+                />
+              </View>
+            )}
 
-            <Text
-              style={styles.title}
+            <View
+              style={
+                styles.headerCopy
+              }
             >
-              {scenario ??
-                'Labirinto'}
-            </Text>
+              <Text
+                style={styles.label}
+              >
+                VISUALIZADOR
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                style={styles.title}
+              >
+                {scenario ??
+                  'Labirinto'}
+              </Text>
+            </View>
           </View>
 
           {/* INICIAR */}
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Iniciar busca"
             disabled={
               animation.isRunning
             }
@@ -714,6 +801,9 @@ export default function VisualizerScreen() {
               pressed,
             }) => [
               styles.startButton,
+
+              isCompactHeader &&
+                styles.startButtonCompact,
 
               animation.isRunning &&
                 styles.startButtonDisabled,
@@ -806,6 +896,8 @@ export default function VisualizerScreen() {
               </View>
 
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Restaurar cenário original"
                 onPress={
                   handleRestoreScenario
                 }
@@ -843,15 +935,83 @@ export default function VisualizerScreen() {
         </View>
 
         {/* ===================================
-            INFORMAÇÃO DO NÓ
+            EDITOR
         ==================================== */}
 
-        <NodeInfo
-          step={selectedStep}
-          cellType={
-            selectedCellType
+        <EditorToolbar
+          selectedMode={
+            editorMode
+          }
+          onModeChange={
+            setEditorMode
           }
         />
+
+        {/* ===================================
+            FERRAMENTA ATIVA
+        ==================================== */}
+
+        <View
+          style={
+            styles.selectedToolCard
+          }
+        >
+          <Text
+            style={
+              styles.selectedToolLabel
+            }
+          >
+            FERRAMENTA ATIVA
+          </Text>
+
+          <View
+            style={
+              styles.selectedToolRow
+            }
+          >
+            <View
+              style={
+                styles.selectedToolIcon
+              }
+            >
+              <Text
+                style={
+                  styles.selectedToolSymbol
+                }
+              >
+                {getEditorSymbol(
+                  editorMode
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.selectedToolContent
+              }
+            >
+              <Text
+                style={
+                  styles.selectedToolTitle
+                }
+              >
+                {getEditorName(
+                  editorMode
+                )}
+              </Text>
+
+              <Text
+                style={
+                  styles.selectedToolDescription
+                }
+              >
+                {getEditorDescription(
+                  editorMode
+                )}
+              </Text>
+            </View>
+          </View>
+        </View>
 
         {/* ===================================
             ANIMAÇÃO
@@ -1047,6 +1207,17 @@ export default function VisualizerScreen() {
         </View>
 
         {/* ===================================
+            INFORMAÇÃO DO NÓ
+        ==================================== */}
+
+        <NodeInfo
+          step={selectedStep}
+          cellType={
+            selectedCellType
+          }
+        />
+
+        {/* ===================================
             SELETOR DE ALGORITMO
         ==================================== */}
 
@@ -1120,142 +1291,102 @@ export default function VisualizerScreen() {
           </Text>
         </Pressable>
 
+        {comparisonResult && (
+          <ComparisonPanel
+            result={comparisonResult}
+            heuristicName={
+              getHeuristicName(
+                heuristic
+              )
+            }
+            movementName={
+              getMovementName(
+                movement
+              )
+            }
+          />
+        )}
+
         {/* ===================================
-            EDITOR
+            RESULTADO
         ==================================== */}
 
-        <EditorToolbar
-          selectedMode={
-            editorMode
-          }
-          onModeChange={
-            setEditorMode
-          }
-        />
-
-        {/* ===================================
-            FERRAMENTA ATIVA
-        ==================================== */}
-
-        <View
-          style={
-            styles.selectedToolCard
-          }
-        >
-          <Text
-            style={
-              styles.selectedToolLabel
-            }
-          >
-            FERRAMENTA ATIVA
-          </Text>
-
-          <View
-            style={
-              styles.selectedToolRow
-            }
-          >
+        {searchResult &&
+          animation.isFinished && (
             <View
               style={
-                styles.selectedToolIcon
+                styles.resultCard
               }
             >
               <Text
                 style={
-                  styles.selectedToolSymbol
+                  styles.resultLabel
                 }
               >
-                {getEditorSymbol(
-                  editorMode
-                )}
-              </Text>
-            </View>
-
-            <View
-              style={
-                styles.selectedToolContent
-              }
-            >
-              <Text
-                style={
-                  styles.selectedToolTitle
-                }
-              >
-                {getEditorName(
-                  editorMode
-                )}
+                RESULTADO
               </Text>
 
               <Text
                 style={
-                  styles.selectedToolDescription
+                  styles.resultTitle
                 }
               >
-                {getEditorDescription(
-                  editorMode
+                {searchResult.found
+                  ? 'Jerry encontrado!'
+                  : 'Sem caminho'}
+              </Text>
+
+              {/* Mostra qual algoritmo foi usado */}
+
+              <Text
+                style={
+                  styles.resultAlgorithm
+                }
+              >
+                {algorithm ===
+                'ASTAR'
+                  ? 'A*'
+                  : 'Guloso'}
+                {' • '}
+                {getHeuristicName(
+                  heuristic
+                )}
+                {' • '}
+                {getMovementName(
+                  movement
                 )}
               </Text>
+
+              <View
+                style={
+                  styles.resultRow
+                }
+              >
+                <ResultItem
+                  label="Visitados"
+                  value={`${searchResult.visitedNodes.length}`}
+                />
+
+                <ResultItem
+                  label="Custo"
+                  value={`${searchResult.totalCost}`}
+                />
+
+                <ResultItem
+                  label="Passos"
+                  value={`${
+                    searchResult.found
+                      ? Math.max(
+                          searchResult.path
+                            .length - 1,
+                          0
+                        )
+                      : 0
+                  }`}
+                />
+              </View>
             </View>
-          </View>
-        </View>
-
-        {/* ===================================
-            LEGENDA
-        ==================================== */}
-
-        <View style={styles.legend}>
-          <Text
-            style={
-              styles.legendTitle
-            }
-          >
-            Legenda
-          </Text>
-
-          <View
-            style={
-              styles.legendRow
-            }
-          >
-            <LegendItem
-              color="#DCEEFF"
-              label="Tom"
-              text="T"
-            />
-
-            <LegendItem
-              color="#FFE1DC"
-              label="Jerry"
-              text="J"
-            />
-
-            <LegendItem
-              color="#FFD966"
-              label="Aberto"
-            />
-
-            <LegendItem
-              color="#76A9EA"
-              label="Visitado"
-            />
-
-            <LegendItem
-              color="#78C98A"
-              label="Caminho"
-            />
-
-            <LegendItem
-              color="#3F4145"
-              label="Parede"
-            />
-
-            <LegendItem
-              color="#FFFFFF"
-              label="Livre"
-              border
-            />
-          </View>
-        </View>
+          )}
 
         {/* ===================================
             CONFIGURAÇÕES
@@ -1381,101 +1512,64 @@ export default function VisualizerScreen() {
         </View>
 
         {/* ===================================
-            RESULTADO
+            LEGENDA
         ==================================== */}
 
-        {searchResult &&
-          animation.isFinished && (
-            <View
-              style={
-                styles.resultCard
+        <View style={styles.legend}>
+          <Text
+            style={
+              styles.legendTitle
+            }
+          >
+            Legenda
+          </Text>
+
+          <View
+            style={
+              styles.legendRow
+            }
+          >
+            <LegendItem
+              color={COLORS.tom}
+              label="Tom"
+              imageSource={TOM_IMAGE}
+            />
+
+            <LegendItem
+              color={COLORS.jerry}
+              label="Jerry"
+              imageSource={
+                JERRY_IMAGE
               }
-            >
-              <Text
-                style={
-                  styles.resultLabel
-                }
-              >
-                RESULTADO
-              </Text>
+            />
 
-              <Text
-                style={
-                  styles.resultTitle
-                }
-              >
-                {searchResult.found
-                  ? 'Jerry encontrado!'
-                  : 'Sem caminho'}
-              </Text>
+            <LegendItem
+              color={COLORS.open}
+              label="Aberto"
+            />
 
-              {/* Mostra qual algoritmo foi usado */}
+            <LegendItem
+              color={COLORS.closed}
+              label="Visitado"
+            />
 
-              <Text
-                style={
-                  styles.resultAlgorithm
-                }
-              >
-                {algorithm ===
-                'ASTAR'
-                  ? 'A*'
-                  : 'Guloso'}
-                {' • '}
-                {getHeuristicName(
-                  heuristic
-                )}
-                {' • '}
-                {getMovementName(
-                  movement
-                )}
-              </Text>
+            <LegendItem
+              color={COLORS.path}
+              label="Caminho"
+            />
 
-              <View
-                style={
-                  styles.resultRow
-                }
-              >
-                <ResultItem
-                  label="Visitados"
-                  value={`${searchResult.visitedNodes.length}`}
-                />
+            <LegendItem
+              color={COLORS.wall}
+              label="Parede"
+            />
 
-                <ResultItem
-                  label="Custo"
-                  value={`${searchResult.totalCost}`}
-                />
-
-                <ResultItem
-                  label="Passos"
-                  value={`${
-                    searchResult.found
-                      ? Math.max(
-                          searchResult.path
-                            .length - 1,
-                          0
-                        )
-                      : 0
-                  }`}
-                />
-              </View>
-            </View>
-          )}
-
-        {comparisonResult && (
-          <ComparisonPanel
-            result={comparisonResult}
-            heuristicName={
-              getHeuristicName(
-                heuristic
-              )
-            }
-            movementName={
-              getMovementName(
-                movement
-              )
-            }
-          />
-        )}
+            <LegendItem
+              color={COLORS.white}
+              label="Livre"
+              border
+            />
+          </View>
+        </View>
 
         <Text
           style={
@@ -1792,14 +1886,14 @@ function findCell(
 interface LegendItemProps {
   color: string;
   label: string;
-  text?: string;
+  imageSource?: number;
   border?: boolean;
 }
 
 function LegendItem({
   color,
   label,
-  text,
+  imageSource,
   border,
 }: LegendItemProps) {
   return (
@@ -1825,14 +1919,15 @@ function LegendItem({
           },
         ]}
       >
-        {text && (
-          <Text
+        {imageSource && (
+          <Image
+            source={imageSource}
+            accessible={false}
             style={
-              styles.legendCellText
+              styles.legendCharacterImage
             }
-          >
-            {text}
-          </Text>
+            resizeMode="contain"
+          />
         )}
       </View>
 
@@ -1878,11 +1973,6 @@ function showMessage(
 
 const styles =
   StyleSheet.create({
-    colunnview: {
-      flexDirection:
-        'column',
-    },
-
     safeArea: {
       flex: 1,
 
@@ -1898,7 +1988,7 @@ const styles =
       paddingHorizontal:
         16,
 
-      paddingTop: 18,
+      paddingTop: 40,
 
       paddingBottom: 50,
     },
@@ -1916,7 +2006,7 @@ const styles =
       alignItems:
         'center',
 
-      marginBottom: 25,
+      marginBottom: 10,
     },
 
     backButton: {
@@ -2003,9 +2093,83 @@ const styles =
       alignItems:
         'center',
 
-      gap: 12,
+      gap: 10,
+
+      backgroundColor:
+        COLORS.surface,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
+
+      borderRadius: 22,
+
+      padding: 12,
 
       marginBottom: 10,
+
+      shadowColor:
+        '#6A4938',
+
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+
+      shadowOpacity: 0.08,
+
+      shadowRadius: 8,
+
+      elevation: 3,
+    },
+
+    visualizerIdentity: {
+      flex: 1,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      minWidth: 0,
+    },
+
+    headerCompact: {
+      flexDirection:
+        'column',
+
+      alignItems:
+        'stretch',
+
+      padding: 14,
+    },
+
+    headerArtwork: {
+      width: 70,
+      height: 52,
+
+      overflow:
+        'hidden',
+
+      backgroundColor:
+        '#F5ECDE',
+
+      borderRadius: 15,
+
+      marginRight: 10,
+    },
+
+    headerImage: {
+      width: '100%',
+      height: '100%',
+    },
+
+    headerCopy: {
+      flex: 1,
+
+      minWidth: 0,
     },
 
     label: {
@@ -2025,12 +2189,12 @@ const styles =
       color:
         COLORS.text,
 
-      fontSize: 28,
+      fontSize: 23,
 
       fontWeight:
         '900',
 
-      marginTop: 4,
+      marginTop: 3,
     },
 
     subtitle: {
@@ -2042,38 +2206,46 @@ const styles =
       color:
         COLORS.textSecondary,
 
-      fontSize: 14,
+      fontSize: 13,
 
-      marginBottom: 10,
+      lineHeight: 19,
+
+      marginBottom: 12,
+
+      paddingHorizontal: 2,
     },
 
     /* INICIAR */
 
     startButton: {
-      width: '100%',
+      minWidth: 128,
+      maxWidth: 160,
 
-      maxWidth: 235,
+      flexShrink: 1,
 
       backgroundColor:
         COLORS.primary,
 
-      paddingHorizontal: 16,
+      paddingHorizontal: 10,
 
-      paddingVertical: 14,
+      paddingVertical: 13,
 
-      borderRadius: 16,
+      borderRadius: 15,
 
       alignItems:
         'center',
 
       justifyContent:
         'center',
-
-      marginLeft: 12,
     },
 
     startButtonDisabled: {
       opacity: 0.45,
+    },
+
+    startButtonCompact: {
+      width: '100%',
+      maxWidth: '100%',
     },
 
     startButtonPressed: {
@@ -2090,10 +2262,13 @@ const styles =
       color:
         COLORS.white,
 
-      fontSize: 16,
+      fontSize: 13,
 
       fontWeight:
         '900',
+
+      textAlign:
+        'center',
     },
 
     /* COMPARAR */
@@ -2168,6 +2343,20 @@ const styles =
       paddingHorizontal: 12,
 
       paddingVertical: 18,
+
+      shadowColor:
+        '#6A4938',
+
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+
+      shadowOpacity: 0.07,
+
+      shadowRadius: 8,
+
+      elevation: 2,
     },
 
     gridHeader: {
@@ -2679,14 +2868,9 @@ const styles =
       marginRight: 6,
     },
 
-    legendCellText: {
-      fontSize: 10,
-
-      fontWeight:
-        '900',
-
-      color:
-        COLORS.text,
+    legendCharacterImage: {
+      width: 21,
+      height: 21,
     },
 
     legendText: {
