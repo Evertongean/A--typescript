@@ -23,6 +23,7 @@ import { EditorToolbar } from '@/components/EditorToolbar';
 import { NodeInfo } from '@/components/NodeInfo';
 import { AlgorithmSelector } from '@/components/AlgorithmSelector';
 import { HeuristicSelector } from '@/components/HeuristicSelector';
+import { MovementSelector } from '@/components/MovementSelector';
 
 import { aStar } from '@/algorithms/aStar';
 import { greedyBestFirst } from '@/algorithms/greedyBestFirst';
@@ -37,6 +38,7 @@ import { SearchResult } from '@/models/SearchResult';
 import { SearchStep } from '@/models/SearchStep';
 import { AlgorithmType } from '@/models/AlgorithmType';
 import { HeuristicType } from '@/models/HeuristicType';
+import { MovementType } from '@/models/MovementType';
 
 const ROWS = 12;
 const COLS = 12;
@@ -76,6 +78,15 @@ export default function VisualizerScreen() {
     heuristic,
     setHeuristic,
   ] = useState<HeuristicType>('MANHATTAN');
+
+  /* ==========================================
+     MOVIMENTO
+  ========================================== */
+
+  const [
+    movement,
+    setMovement,
+  ] = useState<MovementType>('FOUR_DIRECTIONS');
 
   /* ==========================================
      GRID REAL
@@ -408,6 +419,18 @@ export default function VisualizerScreen() {
   }
 
   /* ==========================================
+     TROCAR MOVIMENTO
+  ========================================== */
+
+  function handleMovementChange(
+    value: MovementType
+  ) {
+    handleResetSearch();
+
+    setMovement(value);
+  }
+
+  /* ==========================================
      INICIAR BUSCA
   ========================================== */
 
@@ -454,11 +477,13 @@ export default function VisualizerScreen() {
       algorithm === 'ASTAR'
         ? aStar(
             mazeGrid,
-            heuristic
+            heuristic,
+            movement
           )
         : greedyBestFirst(
             mazeGrid,
-            heuristic
+            heuristic,
+            movement
           );
 
     setSearchResult(result);
@@ -936,6 +961,20 @@ export default function VisualizerScreen() {
         />
 
         {/* ===================================
+            SELETOR DE MOVIMENTO
+        ==================================== */}
+
+        <MovementSelector
+          value={movement}
+          onChange={
+            handleMovementChange
+          }
+          disabled={
+            animation.isRunning
+          }
+        />
+
+        {/* ===================================
             EDITOR
         ==================================== */}
 
@@ -1187,7 +1226,9 @@ export default function VisualizerScreen() {
                   styles.configurationValue
                 }
               >
-                4 direções
+                {getMovementName(
+                  movement
+                )}
               </Text>
             </View>
           </View>
@@ -1236,6 +1277,10 @@ export default function VisualizerScreen() {
                 {' • '}
                 {getHeuristicName(
                   heuristic
+                )}
+                {' • '}
+                {getMovementName(
+                  movement
                 )}
               </Text>
 
@@ -1492,6 +1537,22 @@ function getHeuristicName(
 
     case 'DIAGONAL':
       return 'Diagonal';
+  }
+}
+
+/* ==========================================
+   MOVIMENTO
+========================================== */
+
+function getMovementName(
+  movement: MovementType
+) {
+  switch (movement) {
+    case 'FOUR_DIRECTIONS':
+      return '4 direções';
+
+    case 'EIGHT_DIRECTIONS':
+      return '8 direções';
   }
 }
 

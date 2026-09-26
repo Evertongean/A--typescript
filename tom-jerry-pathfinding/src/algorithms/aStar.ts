@@ -1,46 +1,15 @@
 import { calculateHeuristic } from '@/algorithms/heuristics';
+import {
+  canMoveDiagonally,
+  getMovements,
+} from '@/algorithms/movements';
 
 import { CellType } from '@/models/CellType';
 import { HeuristicType } from '@/models/HeuristicType';
+import { MovementType } from '@/models/MovementType';
 import { SearchNode } from '@/models/Node';
 import { SearchResult } from '@/models/SearchResult';
 import { SearchStep } from '@/models/SearchStep';
-
-/*
- * Neste primeiro A* vamos trabalhar
- * somente com 4 direções.
- *
- * ↑
- * ← → 
- * ↓
- *
- * Cada movimento custa 10.
- *
- * O movimento em 8 direções será
- * adicionado posteriormente.
- */
-const DIRECTIONS = [
-  {
-    row: -1,
-    col: 0,
-    cost: 10,
-  },
-  {
-    row: 1,
-    col: 0,
-    cost: 10,
-  },
-  {
-    row: 0,
-    col: -1,
-    cost: 10,
-  },
-  {
-    row: 0,
-    col: 1,
-    cost: 10,
-  },
-];
 
 /*
  * =========================================
@@ -53,7 +22,8 @@ const DIRECTIONS = [
  */
 export function aStar(
   grid: CellType[][],
-  heuristic: HeuristicType = 'MANHATTAN'
+  heuristic: HeuristicType = 'MANHATTAN',
+  movement: MovementType = 'FOUR_DIRECTIONS'
 ): SearchResult {
   /*
    * Localizamos Tom.
@@ -316,7 +286,9 @@ export function aStar(
 
     for (
       const direction
-      of DIRECTIONS
+      of getMovements(
+        movement
+      )
     ) {
       const neighborRow =
         current.row +
@@ -347,6 +319,17 @@ export function aStar(
       if (
         grid[neighborRow][neighborCol] ===
         'WALL'
+      ) {
+        continue;
+      }
+
+      if (
+        !canMoveDiagonally(
+          grid,
+          current.row,
+          current.col,
+          direction
+        )
       ) {
         continue;
       }

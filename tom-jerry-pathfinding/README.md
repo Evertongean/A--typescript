@@ -17,7 +17,7 @@ O objetivo é demonstrar visualmente como algoritmos de busca percorrem um labir
 - Paredes representam posições que não podem ser atravessadas.
 - O algoritmo explora o grid até encontrar Jerry ou concluir que não existe caminho.
 
-Atualmente, os movimentos são permitidos somente nas quatro direções ortogonais: cima, baixo, esquerda e direita.
+O usuário pode escolher movimentos em quatro direções (cima, baixo, esquerda e direita) ou em oito direções, que também incluem as quatro diagonais. Movimentos retos custam 10 e movimentos diagonais custam 14.
 
 ## Funcionalidades implementadas
 
@@ -30,6 +30,8 @@ Atualmente, os movimentos são permitidos somente nas quatro direções ortogona
 - Busca Gulosa (Greedy Best-First Search).
 - Seleção entre A* e Busca Gulosa.
 - Seleção das heurísticas Manhattan, Euclidiana e Diagonal.
+- Seleção entre movimento em quatro ou oito direções.
+- Prevenção de movimentos diagonais que cortariam cantos bloqueados por paredes.
 - Visualização da lista aberta (**OPEN**) em amarelo.
 - Visualização dos nós fechados/visitados (**CLOSED**) em azul.
 - Visualização do caminho final (**PATH**) em verde.
@@ -76,7 +78,7 @@ Estima a distância em linha reta entre o nó atual e Jerry.
 
 Estima a distância considerando a relação entre deslocamentos retos e diagonais, com custos aproximados de 10 e 14.
 
-A escolha da heurística Diagonal altera somente o cálculo de **H**. Ela não habilita movimentos diagonais: todos os algoritmos continuam usando apenas quatro direções.
+A heurística e o tipo de movimento são configurações independentes. Escolher a heurística Diagonal não ativa automaticamente oito direções, e qualquer heurística pode ser experimentada com quatro ou oito direções.
 
 ## Estados das células
 
@@ -100,7 +102,8 @@ tom-jerry-pathfinding/
 │   ├── algorithms/
 │   │   ├── aStar.ts
 │   │   ├── greedyBestFirst.ts
-│   │   └── heuristics.ts
+│   │   ├── heuristics.ts
+│   │   └── movements.ts
 │   ├── app/
 │   │   ├── _layout.tsx
 │   │   ├── index.tsx
@@ -111,6 +114,7 @@ tom-jerry-pathfinding/
 │   │   ├── Grid.tsx
 │   │   ├── GridCell.tsx
 │   │   ├── HeuristicSelector.tsx
+│   │   ├── MovementSelector.tsx
 │   │   ├── NodeInfo.tsx
 │   │   └── ScenarioCard.tsx
 │   ├── constants/
@@ -121,6 +125,7 @@ tom-jerry-pathfinding/
 │       ├── AlgorithmType.ts
 │       ├── CellType.ts
 │       ├── HeuristicType.ts
+│       ├── MovementType.ts
 │       ├── Node.ts
 │       ├── SearchResult.ts
 │       └── SearchStep.ts
@@ -162,13 +167,14 @@ A partir do terminal do Expo, a aplicação pode ser aberta:
 1. Na tela inicial, escolha uma das opções de cenário.
 2. Selecione A* ou Busca Gulosa.
 3. Selecione a heurística Manhattan, Euclidiana ou Diagonal.
-4. Posicione Tom e Jerry e edite as paredes do labirinto.
-5. Inicie a busca e observe os estados **OPEN**, **CLOSED** e **PATH**.
-6. Pause, continue ou avance manualmente quando desejar analisar a execução.
-7. Toque em um nó analisado para visualizar linha, coluna, estado, G, H e F.
-8. Consulte o resultado final com visitados, custo e quantidade de passos.
+4. Escolha movimento em quatro ou oito direções.
+5. Posicione Tom e Jerry e edite as paredes do labirinto.
+6. Inicie a busca e observe os estados **OPEN**, **CLOSED** e **PATH**.
+7. Pause, continue ou avance manualmente quando desejar analisar a execução.
+8. Toque em um nó analisado para visualizar linha, coluna, estado, G, H e F.
+9. Consulte o resultado final com visitados, custo e quantidade de passos.
 
-Trocar o algoritmo ou a heurística limpa apenas a visualização da busca anterior e preserva Tom, Jerry e as paredes do labirinto.
+Trocar o algoritmo, a heurística ou o tipo de movimento limpa apenas a visualização da busca anterior e preserva Tom, Jerry e as paredes do labirinto.
 
 ## Validação TypeScript
 
@@ -195,7 +201,6 @@ O projeto está em desenvolvimento e já oferece o fluxo principal de edição, 
 ### Próximos passos
 
 - Criar grids específicos para os cenários Cozinha, Sala e Porão.
-- Adicionar movimento em oito direções como opção explícita.
 - Permitir comparação lado a lado entre algoritmos.
 - Adicionar testes automatizados para algoritmos e componentes.
 - Usar sprites de Tom e Jerry dentro do grid.
