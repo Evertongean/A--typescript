@@ -24,24 +24,29 @@ import { NodeInfo } from '@/components/NodeInfo';
 import { AlgorithmSelector } from '@/components/AlgorithmSelector';
 import { HeuristicSelector } from '@/components/HeuristicSelector';
 import { MovementSelector } from '@/components/MovementSelector';
+import { ComparisonPanel } from '@/components/ComparisonPanel';
 
 import { aStar } from '@/algorithms/aStar';
 import { greedyBestFirst } from '@/algorithms/greedyBestFirst';
 
 import { useSearchAnimation } from '@/hooks/useSearchAnimation';
 
+import {
+  createMazeForScenario,
+  MAZE_COLS as COLS,
+  MAZE_ROWS as ROWS,
+} from '@/mazes';
+
 import { COLORS } from '@/constants/colors';
 
 import { CellType } from '@/models/CellType';
+import { ComparisonResult } from '@/models/ComparisonResult';
 import { EditorMode } from '@/models/EditorMode';
 import { SearchResult } from '@/models/SearchResult';
 import { SearchStep } from '@/models/SearchStep';
 import { AlgorithmType } from '@/models/AlgorithmType';
 import { HeuristicType } from '@/models/HeuristicType';
 import { MovementType } from '@/models/MovementType';
-
-const ROWS = 12;
-const COLS = 12;
 
 export default function VisualizerScreen() {
   const router = useRouter();
@@ -96,7 +101,7 @@ export default function VisualizerScreen() {
     mazeGrid,
     setMazeGrid,
   ] = useState<CellType[][]>(
-    () => createExampleGrid()
+    () => createMazeForScenario(scenario)
   );
 
   /* ==========================================
@@ -107,7 +112,7 @@ export default function VisualizerScreen() {
     displayGrid,
     setDisplayGrid,
   ] = useState<CellType[][]>(
-    () => createExampleGrid()
+    () => createMazeForScenario(scenario)
   );
 
   /* ==========================================
@@ -127,6 +132,17 @@ export default function VisualizerScreen() {
     searchResult,
     setSearchResult,
   ] = useState<SearchResult | null>(null);
+
+  /* ==========================================
+     COMPARAÇÃO
+  ========================================== */
+
+  const [
+    comparisonResult,
+    setComparisonResult,
+  ] = useState<ComparisonResult | null>(
+    null
+  );
 
   /* ==========================================
      NÓ SELECIONADO
@@ -376,6 +392,7 @@ export default function VisualizerScreen() {
     newGrid: CellType[][]
   ) {
     setSelectedPosition(null);
+    setComparisonResult(null);
 
     setMazeGrid(
       cloneGrid(newGrid)
@@ -414,6 +431,7 @@ export default function VisualizerScreen() {
      * Tom, Jerry e paredes permanecem no mapa.
      */
     handleResetSearch();
+    setComparisonResult(null);
 
     setHeuristic(value);
   }
@@ -426,17 +444,16 @@ export default function VisualizerScreen() {
     value: MovementType
   ) {
     handleResetSearch();
+    setComparisonResult(null);
 
     setMovement(value);
   }
 
   /* ==========================================
-     INICIAR BUSCA
+     VALIDAR TOM E JERRY
   ========================================== */
 
-  function handleStartSearch() {
-    setSelectedPosition(null);
-
+  function hasRequiredEndpoints() {
     const tom =
       findCell(
         mazeGrid,
@@ -455,7 +472,7 @@ export default function VisualizerScreen() {
         'Posicione Tom no labirinto antes de iniciar a busca.'
       );
 
-      return;
+      return false;
     }
 
     if (!jerry) {
@@ -464,6 +481,20 @@ export default function VisualizerScreen() {
         'Posicione Jerry no labirinto antes de iniciar a busca.'
       );
 
+      return false;
+    }
+
+    return true;
+  }
+
+  /* ==========================================
+     INICIAR BUSCA
+  ========================================== */
+
+  function handleStartSearch() {
+    setSelectedPosition(null);
+
+    if (!hasRequiredEndpoints()) {
       return;
     }
 
@@ -501,6 +532,37 @@ export default function VisualizerScreen() {
   }
 
   /* ==========================================
+     COMPARAR ALGORITMOS
+  ========================================== */
+
+  function handleCompareAlgorithms() {
+    if (
+      animation.isRunning ||
+      !hasRequiredEndpoints()
+    ) {
+      return;
+    }
+
+    const aStarResult = aStar(
+      cloneGrid(mazeGrid),
+      heuristic,
+      movement
+    );
+
+    const greedyResult =
+      greedyBestFirst(
+        cloneGrid(mazeGrid),
+        heuristic,
+        movement
+      );
+
+    setComparisonResult({
+      aStar: aStarResult,
+      greedy: greedyResult,
+    });
+  }
+
+  /* ==========================================
      RESETAR BUSCA
   ========================================== */
 
@@ -520,6 +582,32 @@ export default function VisualizerScreen() {
     setSearchStatus(
       'Editável'
     );
+  }
+
+  /* ==========================================
+     RESTAURAR CENÁRIO
+  ========================================== */
+
+  function handleRestoreScenario() {
+    const restoredGrid =
+      createMazeForScenario(
+        scenario
+      );
+
+    animation.reset();
+
+    setMazeGrid(
+      cloneGrid(restoredGrid)
+    );
+
+    setDisplayGrid(
+      cloneGrid(restoredGrid)
+    );
+
+    setSearchResult(null);
+    setComparisonResult(null);
+    setSelectedPosition(null);
+    setSearchStatus('Editável');
   }
 
   return (
@@ -681,35 +769,61 @@ export default function VisualizerScreen() {
             </View>
 
             <View
-              style={[
-                styles.status,
-
-                searchStatus ===
-                  'Sem caminho' &&
-                  styles.statusError,
-              ]}
+              style={
+                styles.gridHeaderActions
+              }
             >
               <View
                 style={[
-                  styles.statusDot,
+                  styles.status,
 
                   searchStatus ===
                     'Sem caminho' &&
-                    styles.statusDotError,
-                ]}
-              />
-
-              <Text
-                style={[
-                  styles.statusText,
-
-                  searchStatus ===
-                    'Sem caminho' &&
-                    styles.statusTextError,
+                    styles.statusError,
                 ]}
               >
-                {searchStatus}
-              </Text>
+                <View
+                  style={[
+                    styles.statusDot,
+
+                    searchStatus ===
+                      'Sem caminho' &&
+                      styles.statusDotError,
+                  ]}
+                />
+
+                <Text
+                  style={[
+                    styles.statusText,
+
+                    searchStatus ===
+                      'Sem caminho' &&
+                      styles.statusTextError,
+                  ]}
+                >
+                  {searchStatus}
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={
+                  handleRestoreScenario
+                }
+                style={({ pressed }) => [
+                  styles.restoreScenarioButton,
+
+                  pressed &&
+                    styles.restoreScenarioButtonPressed,
+                ]}
+              >
+                <Text
+                  style={
+                    styles.restoreScenarioButtonText
+                  }
+                >
+                  ↻ Restaurar cenário
+                </Text>
+              </Pressable>
             </View>
           </View>
 
@@ -973,6 +1087,38 @@ export default function VisualizerScreen() {
             animation.isRunning
           }
         />
+
+        {/* ===================================
+            COMPARAR ALGORITMOS
+        ==================================== */}
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={
+            animation.isRunning
+          }
+          onPress={
+            handleCompareAlgorithms
+          }
+          style={({ pressed }) => [
+            styles.compareButton,
+
+            animation.isRunning &&
+              styles.compareButtonDisabled,
+
+            pressed &&
+              !animation.isRunning &&
+              styles.compareButtonPressed,
+          ]}
+        >
+          <Text
+            style={
+              styles.compareButtonText
+            }
+          >
+            ⇄ Comparar A* × Guloso
+          </Text>
+        </Pressable>
 
         {/* ===================================
             EDITOR
@@ -1314,6 +1460,22 @@ export default function VisualizerScreen() {
               </View>
             </View>
           )}
+
+        {comparisonResult && (
+          <ComparisonPanel
+            result={comparisonResult}
+            heuristicName={
+              getHeuristicName(
+                heuristic
+              )
+            }
+            movementName={
+              getMovementName(
+                movement
+              )
+            }
+          />
+        )}
 
         <Text
           style={
@@ -1711,84 +1873,6 @@ function showMessage(
 }
 
 /* ==========================================
-   GRID INICIAL
-========================================== */
-
-function createExampleGrid():
-  CellType[][] {
-  const grid:
-    CellType[][] =
-    Array.from(
-      {
-        length: ROWS,
-      },
-      () =>
-        Array.from(
-          {
-            length: COLS,
-          },
-          () =>
-            'EMPTY' as CellType
-        )
-    );
-
-  /*
-   * TOM
-   */
-  grid[1][1] = 'START';
-
-  /*
-   * JERRY
-   */
-  grid[10][10] = 'GOAL';
-
-  /*
-   * PAREDES
-   */
-  const walls: [
-    number,
-    number
-  ][] = [
-    [2, 3],
-    [2, 4],
-    [2, 5],
-
-    [3, 5],
-
-    [4, 2],
-    [4, 3],
-    [4, 5],
-
-    [5, 5],
-    [5, 6],
-    [5, 7],
-
-    [6, 3],
-    [6, 7],
-
-    [7, 3],
-    [7, 7],
-
-    [8, 3],
-    [8, 4],
-    [8, 5],
-    [8, 7],
-    [8, 8],
-
-    [9, 8],
-  ];
-
-  walls.forEach(
-    ([row, col]) => {
-      grid[row][col] =
-        'WALL';
-    }
-  );
-
-  return grid;
-}
-
-/* ==========================================
    ESTILOS
 ========================================== */
 
@@ -2012,6 +2096,57 @@ const styles =
         '900',
     },
 
+    /* COMPARAR */
+
+    compareButton: {
+      width: '100%',
+      maxWidth: 650,
+      alignSelf:
+        'center',
+
+      backgroundColor:
+        '#FFF0EC',
+
+      borderWidth: 1,
+      borderColor:
+        COLORS.primary,
+      borderRadius: 16,
+
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+
+      marginTop: 16,
+    },
+
+    compareButtonDisabled: {
+      opacity: 0.45,
+    },
+
+    compareButtonPressed: {
+      opacity: 0.8,
+
+      transform: [
+        {
+          scale: 0.98,
+        },
+      ],
+    },
+
+    compareButtonText: {
+      color:
+        COLORS.primary,
+
+      fontSize: 15,
+
+      fontWeight:
+        '900',
+    },
+
     /* GRID */
 
     gridCard: {
@@ -2046,6 +2181,43 @@ const styles =
         'center',
 
       marginBottom: 18,
+    },
+
+    gridHeaderActions: {
+      alignItems:
+        'flex-end',
+
+      gap: 8,
+    },
+
+    restoreScenarioButton: {
+      backgroundColor:
+        COLORS.background,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
+
+      borderRadius: 10,
+
+      paddingHorizontal: 10,
+
+      paddingVertical: 7,
+    },
+
+    restoreScenarioButtonPressed: {
+      opacity: 0.7,
+    },
+
+    restoreScenarioButtonText: {
+      color:
+        COLORS.primary,
+
+      fontSize: 10,
+
+      fontWeight:
+        '800',
     },
 
     gridLabel: {
